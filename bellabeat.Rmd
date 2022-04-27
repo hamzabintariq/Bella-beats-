@@ -1,0 +1,335 @@
+---
+title: "BellaBeat"
+author: "Hamza"
+date: '2022-03-20'
+output: html_document
+---
+
+##Case study of "BellaBeat". How well can technology company play it smart.
+
+#scenerio
+You have been asked to focus on one of Bellabeat’s products and analyze smart device data to gain insight into how consumers are using their smart devices. The insights you discover will then help guide marketing strategy for the company. You will present your analysis to the Bellabeat executive team along with your high-level recommendations for Bellabeat’s marketing strategy
+
+##Data Preparation
+In this activity, you will be using a package called `tidyverse.` The `tidyverse` package is actually a collection individual `packages` that can help you perform a wide variety of analysis tasks.We will also be using 'tidyverse' library. We also will be using `ggplot2` packages and library for the graphical representation of the data.
+```{r}
+install.packages("tidyverse")
+install.packages("ggplot2")
+library("tidyverse")
+library("ggplot2")
+library(lubridate)
+```
+
+Now we need to import our dataset. It can be done by read_csv("Data_name"). Or is data in your laptop/computer just go to file on the rght side of you screen and click in dataset and then click on import. we have imported in total of 18 datasets that we will use in this analysis.
+
+We can view data once it is imported. 
+```{r}
+View(dailyActivity_merged)
+View(dailyCalories_merged)
+View(dailyIntensities_merged)
+View(dailySteps_merged)
+View(heartrate_seconds_merged)
+View(hourlyCalories_merged)
+View(hourlyIntensities_merged)
+View(hourlySteps_merged)
+View(minuteCaloriesNarrow_merged)
+View(minuteCaloriesWide_merged)
+View(minuteIntensitiesNarrow_merged)
+View(minuteMETsNarrow_merged)
+View(minuteSleep_merged)
+View(minuteStepsNarrow_merged)
+View(minuteStepsWide_merged)
+View(sleepDay_merged)
+View(weightLogInfo_merged)
+```
+
+
+
+One common function you can use to preview the data is the `head()` function, which displays the columns and the first several rows of data.
+
+```{r}
+head(dailyActivity_merged)
+```
+
+
+##Data cleaning and Exploration
+
+Now we will explore data by looking what each file contain by looking at columns, data type, rows etc and then we will do data cleaning by formatting and filtering the data using various R pragramming functions.
+
+```{r}
+str(dailyActivity_merged)
+str(dailySteps_merged)
+str(dailyCalories_merged)
+str(dailyIntensities_merged)
+```
+
+
+We can check list of column by colnames() funtion. We can also look at the summarized data with wide range of summary statistic
+```{r}
+colnames(dailyActivity_merged)
+summary(dailyActivity_merged)
+```
+
+
+Importing some useful libraries which are good for data cleaning task
+```{r}
+install.packages("skimr")
+install.packages("here")
+install.packages("janitor")
+library("skimr")
+library("here")
+library(janitor)
+```
+
+```{r}
+install.packages("dplyr")
+library(dplyr)
+```
+
+
+```{r}
+skim_without_charts(dailyActivity_merged)
+clean_names(dailyActivity_merged)
+```
+
+
+We will now remove the row from the table where distance travel by user is 0, as those value are unrelated to my data analysis and can create wrong analysis
+
+Logged activity column removed as mostly all value are 0 in there and that data is not needed for analysis
+
+
+```{r}
+daily_activity <- dailyActivity_merged[!(dailyActivity_merged$TotalDistance == 0),]%>%
+  subset(select = -c( LoggedActivitiesDistance, SedentaryActiveDistance))%>%
+  arrange(-TotalSteps)
+
+View(daily_activity)
+  
+```
+
+Checking if there is any duplicate value in the data frame that can cause wrong analysis in our analysis.
+
+```{r}
+sum(duplicated(daily_activity))
+```
+Now same like this, lets clean other data sets and arrange and sort them in the way we want to analyze the data. First lets start with all daily related dataset
+
+```{r}
+daily_calories<- dailyCalories_merged%>%
+  arrange(ActivityDay)%>%
+  clean_names()
+  
+
+daily_intensities <- dailyIntensities_merged %>%
+  subset(select = -c(SedentaryActiveDistance))%>%
+  arrange(ActivityDay)%>%
+  clean_names()
+  
+
+daily_steps <- dailySteps_merged%>%
+  arrange(ActivityDay)%>%
+  clean_names()
+
+
+View(daily_intensities)
+View(daily_steps)
+View(daily_calories)
+
+sum(duplicated(daily_calories))
+sum(duplicated(daily_steps))
+sum(duplicated(daily_intensities))
+```
+
+
+Now the data is clean, lets merge them into one table and arrange them by acticity day
+    
+```{r}
+daily_calories_steps <- merge(x=daily_calories, y=daily_steps, by= c("id", "activity_day"), all.x = TRUE)%>%
+  arrange(activity_day)
+
+View(daily_calories_steps)
+```
+
+```{r}
+daily_calories_steps_intensities <- merge(x=daily_calories_steps, y=daily_intensities, by= c("id", "activity_day"), all.x = TRUE)%>%
+  arrange(activity_day)
+
+View(daily_calories_steps_intensities)
+str(daily_calories_steps_intensities)
+```
+
+All daily related data is clean and in one table from 4 table
+
+Now Lets do this all again for hourly related data and minutes related data
+
+First, hourly related dataset
+```{r}
+hourly_calories <- hourlyCalories_merged %>%
+  arrange(ActivityHour)%>%
+  clean_names()
+
+hourly_step <- hourlySteps_merged %>%
+  arrange(ActivityHour)%>%
+  clean_names()
+
+hourly_intensities <- hourlyIntensities_merged%>%
+  arrange(ActivityHour)%>%
+  clean_names()
+
+View(hourly_intensities)
+View(hourly_step)
+View(hourly_calories)
+
+sum(duplicated(hourly_intensities))
+sum(duplicated(hourly_step))
+sum(duplicated(hourly_calories))
+```
+
+now merging hourly tables and arranging them by activity hour
+
+```{r}
+hourly_calories_steps <- hourly_calories%>%
+  left_join(hourly_step, by= c("id","activity_hour"))%>%
+              arrange(activity_hour)
+            
+
+hourly_calories_steps_intensities <- hourly_calories_steps%>%
+  left_join(hourly_intensities, by= c("id","activity_hour"))%>%
+  arrange(activity_hour)
+  
+
+  
+View(hourly_calories_steps_intensities)  
+str(hourly_calories_steps_intensities)
+```
+
+
+now for minutes dataset
+```{r}
+minutes_narrow<- minuteCaloriesNarrow_merged %>%
+  left_join(minuteIntensitiesNarrow_merged,by= c("Id","ActivityMinute"))%>%
+  left_join(minuteMETsNarrow_merged, by= c("Id", "ActivityMinute"))%>%
+  left_join(minuteStepsNarrow_merged, by= c("Id", "ActivityMinute"))%>%
+  arrange(ActivityMinute)%>%
+  clean_names()
+
+View(minutes_narrow)
+sum(duplicated(minutes_narrow))
+str(minutes_narrow)
+```
+
+Now for Sleep data set
+```{r}
+sum(duplicated(sleepDay_merged))
+```
+
+there are some duplicated values in Sleep data set, now we need to remove them
+```{r}
+sleep_day<- sleepDay_merged%>%
+  distinct()%>%
+  drop_na()%>%
+  clean_names()
+
+sum(duplicated(sleep_day))
+View(sleep_day)
+```
+Date is in string form which we need to turn in to Date time form
+```{r}
+sleep_day <- sleep_day %>%
+  rename(dates = sleep_day) %>%
+  mutate(dates = as_date(dates,format ="%m/%d/%Y %I:%M:%S %p" , tz=Sys.timezone()))
+ 
+
+
+```
+```{r}
+
+
+Sleep_minutes<-minuteSleep_merged%>%
+  rename(dates= date)%>%
+  mutate(dates = as_date(dates,format ="%m/%d/%Y %I:%M:%S %p" , tz=Sys.timezone()))%>%
+  clean_names()
+
+str(Sleep_minutes)
+```
+
+merging sleep_date with minutes sleep data now
+```{r}
+sleep_data <- merge(x=sleep_day, y=Sleep_minutes, by= c("id","dates"), all.x=TRUE)
+
+View(sleep_data)
+```
+
+now the data is clean and sorted, now merge all data to one table.
+but we need to converts all activity type in daily, hourly and minutes table from char to date time
+
+```{r}
+daily_calories_steps_intensities<-daily_calories_steps_intensities%>%
+  rename(dates=activity_day)%>%
+   mutate(dates = as_date(dates,format ="%m/%d/%Y" , tz=Sys.timezone()))
+
+hourly_calories_steps_intensities<-hourly_calories_steps_intensities%>%
+  rename(dates=activity_hour)%>%
+   mutate(dates = as_date(dates,format ="%m/%d/%Y %I:%M:%S %p" , tz=Sys.timezone()))
+
+minutes_narrow<- minutes_narrow%>%
+  rename(dates = activity_minute)%>%
+   mutate(dates = as_date(dates,format ="%m/%d/%Y %I:%M:%S %p" , tz=Sys.timezone()))
+
+
+
+```
+
+
+## data analysis 
+
+Now we have sorted and filter the data set and merge them together to use them in our analysis
+
+the table we process and will use are 
+
+1 - daily_calories_steps_intensities
+2 - hourly_calories_steps_intensities
+3 - minutes_narrow
+4 - sleep_data
+
+```{r}
+ggplot(daily_calories_steps_intensities)+
+  geom_point(mapping= aes(x=calories, y=step_total, color=lightly_active_minutes, alpha=0.1))+
+  geom_smooth(mapping= aes(x=calories, y=step_total))+
+  labs(titles= "Total steps VS. colories (Daily)")
+
+ggplot(daily_calories_steps_intensities)+
+  geom_point(mapping= aes(x=calories, y=step_total, color=very_active_minutes, alpha=0.1))+
+  geom_smooth(mapping= aes(x=calories, y=step_total))+
+  labs(titles= "Total steps VS. colories (Daily)")
+
+ggplot(daily_calories_steps_intensities)+
+  geom_point(mapping= aes(x=calories, y=step_total, color=sedentary_minutes, alpha=0.1))+
+  geom_smooth(mapping= aes(x=calories, y=step_total))+
+  labs(titles= "Total steps VS. colories (Daily)")
+```
+
+The correlation between Total steps and calories is directly proportional as more step we take more calories we burn. But by the color density of each active minute we can tell that very few were Very Active and most of them were lightly active in there journey   
+
+
+
+
+```{r}
+ggplot(hourly_calories_steps_intensities)+
+  geom_point(mapping= aes(x=calories, y=step_total, color=total_intensity, alpha=0.1))+
+  geom_smooth(mapping= aes(x=calories, y=step_total))+
+  labs(titles= "Total steps VS colories (Hourly)")
+
+```
+
+It can be seen by graph that majority of the people were able to take below 3000 steps in hour. Al though there are some who able to take around 6000 steps in hours and there intensity were high for that, people with Below 3000 steps pr hour, there intensity were low or below average.
+
+
+
+```{r}
+ggplot(sleep_data)+
+  geom_point(mapping= aes(x=total_minutes_asleep, y=total_time_in_bed, alpha=0.1))+
+  geom_smooth(mapping= aes(x=total_minutes_asleep, y=total_time_in_bed))+
+  labs(titles= "Total Sleep VS. Total minutes in Bed")
+```
+The relationship seem linear of total minutes sleep and total time in bed. 
